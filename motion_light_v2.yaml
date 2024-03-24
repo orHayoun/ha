@@ -4,7 +4,7 @@ blueprint:
     Turn on a light with specified brightness and transition times when motion
     is detected. Brightness changes based on time of day.
   domain: automation
-  source_url: https://github.com/home-assistant/core/blob/dev/homeassistant/components/automation/blueprints/motion_light.yaml
+  source_url: https://github.com/orHayoun/ha/blob/main/motion_light_v2.yaml
   author: Home Assistant
   input:
     motion_entity:
