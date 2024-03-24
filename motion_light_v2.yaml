@@ -1,0 +1,113 @@
+blueprint:
+  name: Motion-activated Light with Adjustable Brightness and Transition
+  description: >-
+    Turn on a light with specified brightness and transition times when motion
+    is detected. Brightness changes based on time of day.
+  domain: automation
+  source_url: https://github.com/home-assistant/core/blob/dev/homeassistant/components/automation/blueprints/motion_light.yaml
+  author: Home Assistant
+  input:
+    motion_entity:
+      name: Motion Sensor
+      selector:
+        entity:
+          filter:
+            device_class: motion
+            domain: binary_sensor
+    light_target:
+      name: Light
+      selector:
+        target:
+          entity:
+            domain: light
+    no_motion_wait:
+      name: Wait time
+      description: Time to leave the light on after last motion is detected.
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    transition_time:
+      name: Transition Time
+      description: Time it takes for the light to turn on or off.
+      default: 2
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: seconds
+    day_brightness:
+      name: Day Brightness
+      description: Brightness level for the light during the day.
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 255
+    evening_brightness:
+      name: Evening Brightness
+      description: Brightness level for the light during the evening.
+      default: 70
+      selector:
+        number:
+          min: 0
+          max: 255
+    night_brightness:
+      name: Night Brightness
+      description: Brightness level for the light during the night.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 255
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  platform: state
+  entity_id: !input motion_entity
+  from: "off"
+  to: "on"
+
+action:
+  - alias: "Determine Brightness Based on Time of Day"
+    variables:
+      time_of_day: >
+        {% set hour = now().hour %}
+        {% if 6 <= hour < 18 %}
+          day
+        {% elif 18 <= hour < 22 %}
+          evening
+        {% else %}
+          night
+        {% endif %}
+      brightness: >
+        {% if time_of_day == 'day' %}
+          {{ input.day_brightness }}
+        {% elif time_of_day == 'evening' %}
+          {{ input.evening_brightness }}
+        {% else %}
+          {{ input.night_brightness }}
+        {% endif %}
+  - alias: "Turn on the light with transition"
+    service: light.turn_on
+    target: !input light_target
+    data:
+      brightness: "{{ brightness }}"
+      transition: "{{ input.transition_time }}"
+  - alias: "Wait until there is no motion from device"
+    wait_for_trigger:
+      platform: state
+      entity_id: !input motion_entity
+      from: "on"
+      to: "off"
+  - alias: "Wait the number of seconds that has been set"
+    delay: !input no_motion_wait
+  - alias: "Turn off the light with transition"
+    service: light.turn_off
+    target: !input light_target
+    data:
+      transition: "{{ input.transition_time }}"
