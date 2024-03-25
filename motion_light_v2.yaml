@@ -73,21 +73,28 @@ trigger:
   to: "on"
 
 action:
-  - variables:
-      current_hour: "{{ now().hour }}"
-      brightness: >
-        {% if 6 <= current_hour < 18 %}
-          {{ day_brightness }}
-        {% elif 18 <= current_hour < 22 %}
-          {{ evening_brightness }}
-        {% else %}
-          {{ night_brightness }}
-        {% endif %}
-  - service: light.turn_on
-    target: !input "light_target"
-    data:
-      brightness: "{{ brightness | int }}"
-      transition: "{{ transition_time | int }}"
+  - choose:
+      - conditions: "{{ now().hour >= 6 and now().hour < 18 }}"
+        sequence:
+          - service: light.turn_on
+            target: !input "light_target"
+            data:
+              brightness: "{{ input.day_brightness | int }}"
+              transition: "{{ input.transition_time | int }}"
+      - conditions: "{{ now().hour >= 18 and now().hour < 22 }}"
+        sequence:
+          - service: light.turn_on
+            target: !input "light_target"
+            data:
+              brightness: "{{ input.evening_brightness | int }}"
+              transition: "{{ input.transition_time | int }}"
+      - conditions: "{{ now().hour >= 22 or now().hour < 6 }}"
+        sequence:
+          - service: light.turn_on
+            target: !input "light_target"
+            data:
+              brightness: "{{ input.night_brightness | int }}"
+              transition: "{{ input.transition_time | int }}"
   - wait_for_trigger:
       platform: state
       entity_id: !input "motion_entity"
@@ -97,4 +104,4 @@ action:
   - service: light.turn_off
     target: !input "light_target"
     data:
-      transition: "{{ transition_time | int }}"
+      transition: "{{ input.transition_time | int }}"
