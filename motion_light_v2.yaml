@@ -77,27 +77,30 @@ action:
     variables:
       time_of_day: >
         {% set hour = now().hour %}
-        {% if 6 <= hour < 18 -%}
+        {% if 6 <= hour < 18 %}
           'day'
-        {% elif 18 <= hour < 22 -%}
+        {% elif 18 <= hour < 22 %}
           'evening'
-        {% else -%}
+        {% else %}
           'night'
         {% endif %}
       brightness: >
-        {% if time_of_day == 'day' -%}
-          {{ day_brightness }}
-        {% elif time_of_day == 'evening' -%}
-          {{ evening_brightness }}
-        {% else -%}
-          {{ night_brightness }}
+        {% set bd = day_brightness | int %}
+        {% set be = evening_brightness | int %}
+        {% set bn = night_brightness | int %}
+        {% if time_of_day == 'day' %}
+          {{ bd }}
+        {% elif time_of_day == 'evening' %}
+          {{ be }}
+        {% else %}
+          {{ bn }}
         {% endif %}
   - alias: "Turn on the light with transition"
     service: light.turn_on
     target: !input light_target
     data:
-      brightness: "{{ brightness }}"
-      transition: "{{ transition_time }}"
+      brightness: "{{ brightness | int }}"
+      transition: "{{ transition_time | int }}"
   - alias: "Wait until there is no motion from device"
     wait_for_trigger:
       platform: state
@@ -105,9 +108,9 @@ action:
       from: "on"
       to: "off"
   - alias: "Wait the number of seconds that has been set"
-    delay: "{{ no_motion_wait }}"
+    delay: "{{ no_motion_wait | int }}"
   - alias: "Turn off the light with transition"
     service: light.turn_off
     target: !input light_target
     data:
-      transition: "{{ transition_time }}"
+      transition: "{{ transition_time | int }}"
