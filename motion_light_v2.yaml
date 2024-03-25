@@ -73,44 +73,40 @@ trigger:
   to: "on"
 
 action:
-  - alias: "Determine Brightness Based on Time of Day"
-    variables:
-      time_of_day: >
-        {% set hour = now().hour %}
-        {% if 6 <= hour < 18 %}
-          'day'
-        {% elif 18 <= hour < 22 %}
-          'evening'
-        {% else %}
-          'night'
-        {% endif %}
-      brightness: >
-        {% set bd = day_brightness | int %}
-        {% set be = evening_brightness | int %}
-        {% set bn = night_brightness | int %}
-        {% if time_of_day == 'day' %}
-          {{ bd }}
-        {% elif time_of_day == 'evening' %}
-          {{ be }}
-        {% else %}
-          {{ bn }}
-        {% endif %}
-  - alias: "Turn on the light with transition"
-    service: light.turn_on
-    target: !input light_target
-    data:
-      brightness: "{{ brightness | int }}"
-      transition: "{{ transition_time | int }}"
-  - alias: "Wait until there is no motion from device"
+  - alias: "Calculate Brightness Based on Time of Day"
+    choose:
+      - conditions: "{{ now().hour >= 6 and now().hour < 18 }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+            data:
+              brightness: "{{ day_brightness | int }}"
+              transition: "{{ transition_time | int }}"
+      - conditions: "{{ now().hour >= 18 and now().hour < 22 }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+            data:
+              brightness: "{{ evening_brightness | int }}"
+              transition: "{{ transition_time | int }}"
+      - conditions: "{{ now().hour >= 22 or now().hour < 6 }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+            data:
+              brightness: "{{ night_brightness | int }}"
+              transition: "{{ transition_time | int }}"
+  - alias: "Wait for no motion"
     wait_for_trigger:
       platform: state
       entity_id: !input motion_entity
       from: "on"
       to: "off"
-  - alias: "Wait the number of seconds that has been set"
+  - alias: "Delay"
     delay: "{{ no_motion_wait | int }}"
-  - alias: "Turn off the light with transition"
+  - alias: "Turn off the light"
     service: light.turn_off
     target: !input light_target
     data:
       transition: "{{ transition_time | int }}"
+
