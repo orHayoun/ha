@@ -5,8 +5,6 @@ blueprint:
     is detected. Brightness changes based on time of day.
   domain: automation
   source_url: https://github.com/orHayoun/ha/blob/main/motion_light_v2.yaml
-  author: Home Assistant
-
   input:
     motion_entity:
       name: Motion Sensor
@@ -21,14 +19,14 @@ blueprint:
           entity:
             domain: light
     no_motion_wait:
-      name: Wait time
+      name: Wait Time
       description: Time to leave the light on after the last motion is detected.
       default: 120
       selector:
         number:
           min: 0
           max: 3600
-          unit_of_measurement: seconds
+          unit_of_measurement: "seconds"
     transition_time:
       name: Transition Time
       description: Time it takes for the light to turn on or off.
@@ -37,10 +35,9 @@ blueprint:
         number:
           min: 0
           max: 60
-          unit_of_measurement: seconds
+          unit_of_measurement: "seconds"
     day_brightness:
       name: Day Brightness
-      description: Brightness level for the light during the day.
       default: 100
       selector:
         number:
@@ -48,7 +45,6 @@ blueprint:
           max: 255
     evening_brightness:
       name: Evening Brightness
-      description: Brightness level for the light during the evening.
       default: 70
       selector:
         number:
@@ -56,7 +52,6 @@ blueprint:
           max: 255
     night_brightness:
       name: Night Brightness
-      description: Brightness level for the light during the night.
       default: 30
       selector:
         number:
@@ -73,35 +68,31 @@ trigger:
   to: "on"
 
 action:
-  - choose:
-      - conditions: "{{ now().hour >= 6 and now().hour < 18 }}"
-        sequence:
-          - service: light.turn_on
-            target: !input "light_target"
-            data:
-              brightness: "{{ day_brightness | int }}"
-              transition: "{{ transition_time | int }}"
-      - conditions: "{{ now().hour >= 18 and now().hour < 22 }}"
-        sequence:
-          - service: light.turn_on
-            target: !input "light_target"
-            data:
-              brightness: "{{ evening_brightness | int }}"
-              transition: "{{ transition_time | int }}"
-      - conditions: "{{ now().hour >= 22 or now().hour < 6 }}"
-        sequence:
-          - service: light.turn_on
-            target: !input "light_target"
-            data:
-              brightness: "{{ night_brightness | int }}"
-              transition: "{{ transition_time | int }}"
+  - variables:
+      current_hour: "{{ now().hour }}"
+      brightness_level: >
+        {% set brightness = 255 %}
+        {% if 6 <= current_hour < 18 %}
+          {% set brightness = day_brightness %}
+        {% elif 18 <= current_hour < 22 %}
+          {% set brightness = evening_brightness %}
+        {% else %}
+          {% set brightness = night_brightness %}
+        {% endif %}
+        {{ brightness }}
+  - service: light.turn_on
+    target: !input "light_target"
+    data:
+      brightness: "{{ brightness_level | int }}"
+      transition: "{{ transition_time | int }}"
   - wait_for_trigger:
       platform: state
       entity_id: !input "motion_entity"
       from: "on"
       to: "off"
-  - delay: "{{ no_motion_wait | int }}"
+  - delay: "{{ no_motion_wait }}"
   - service: light.turn_off
     target: !input "light_target"
     data:
       transition: "{{ transition_time | int }}"
+
