@@ -79,29 +79,29 @@ action:
           - service: light.turn_on
             target: !input "light_target"
             data:
-              brightness: "{{ input.day_brightness | int }}"
-              transition: "{{ input.transition_time | int }}"
+              brightness: "{{ day_brightness | int }}"
+              transition: "{{ transition_time | int }}"
       - conditions: "{{ now().hour >= 18 and now().hour < 22 }}"
         sequence:
           - service: light.turn_on
             target: !input "light_target"
             data:
-              brightness: "{{ input.evening_brightness | int }}"
-              transition: "{{ input.transition_time | int }}"
+              brightness: "{{ evening_brightness | int }}"
+              transition: "{{ transition_time | int }}"
       - conditions: "{{ now().hour >= 22 or now().hour < 6 }}"
         sequence:
           - service: light.turn_on
             target: !input "light_target"
             data:
-              brightness: "{{ input.night_brightness | int }}"
-              transition: "{{ input.transition_time | int }}"
+              brightness: "{{ night_brightness | int }}"
+              transition: "{{ transition_time | int }}"
   - wait_for_trigger:
       platform: state
       entity_id: !input "motion_entity"
       from: "on"
       to: "off"
-  - delay: "{{ no_motion_wait }}"
+  - delay: "{{ no_motion_wait | int }}"
   - service: light.turn_off
     target: !input "light_target"
     data:
-      transition: "{{ input.transition_time | int }}"
+      transition: "{{ transition_time | int }}"
